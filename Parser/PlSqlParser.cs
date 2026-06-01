@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -48,14 +48,17 @@ namespace PlSqlAnalyzer.Parser {
         ResolveRefs(f);
         MarkDeadCode(f);
       }
-      catch (Exception ex) { f.Errors.Add("Parser: " + ex.Message); }
+      catch (Exception ex) {
+        f.Errors.Add("Parser Critical Error: " + ex.Message);
+      }
       return f;
     }
 
     // ── 최상위 파싱 ─────────────────────────────────────────
     void ParseTopLevel(string src, string[] lines, PlSqlFile f) {
+      // 1. 패키지(BODY 포함) 탐지 규칙 완화 (CREATE OR REPLACE 생략 허용)
       var pkgRx = new Regex(
-          @"CREATE\s+(?:OR\s+REPLACE\s+)?PACKAGE\s+(BODY\s+)?(\w+)",
+          @"(?:CREATE\s+(?:OR\s+REPLACE\s+)?)?PACKAGE\s+(BODY\s+)?(\w+)",
           RegexOptions.IgnoreCase);
 
       var pkgM = pkgRx.Match(src);
@@ -75,69 +78,87 @@ namespace PlSqlAnalyzer.Parser {
         f.Objects.Add(pkg);
       }
       else {
-        // standalone PROCEDURE / FUNCTION
+        // 2. 단독(Standalone) PROCEDURE / FUNCTION 탐지 규칙 완화 (CREATE 생략 가능)
+        // \b 단어 경계를 활용하여 앞에 CREATE가 있든 없든 키워드만 맞으면 탐지하도록 수정
         var rx = new Regex(
-            @"CREATE\s+(?:OR\s+REPLACE\s+)?(PROCEDURE|FUNCTION)\s+(\w+)",
+            @"\b(PROCEDURE|FUNCTION)\s+(\w+)",
             RegexOptions.IgnoreCase);
-        foreach (Match m in rx.Matches(src))
-          f.Objects.Add(BuildObj(src, lines, m.Groups[1].Value,
-                                 m.Groups[2].Value, m.Index, null, f.FilePath));
+
+        foreach (Match m in rx.Matches(src)) {
+          // 선언부 패턴(단순 정의/호출)을 오인하지 않도록 최소한의 필터링 또는 바인딩
+          var obj = BuildObj(src, lines, m.Groups[1].Value, m.Groups[2].Value, m.Index, null, f.FilePath);
+          if (obj != null) {
+            f.Objects.Add(obj);
+          }
+        }
       }
     }
 
     // ── 패키지 내 자식(프로시저/함수) 파싱 ─────────────────
     void ParseChildren(string src, string[] lines, PlSqlObj parent, PlSqlFile f) {
+      // 파라미터 괄호가 생략되고 바로 IS/AS가 오는 경우(\s+IS|\s+AS)까지 매칭하도록 정규식 개선
       var rx = new Regex(
-          @"(?:^|[\s;])(PROCEDURE|FUNCTION)\s+(\w+)\s*[\(;]",
-          RegexOptions.IgnoreCase | RegexOptions.Multiline);
+          @"\b(PROCEDURE|FUNCTION)\s+(\w+)(?:\s*[\(;]|\s+(?:IS|AS)\b)",
+          RegexOptions.IgnoreCase);
 
       foreach (Match m in rx.Matches(src)) {
         int lineNo = LineOf(src, m.Index);
         if (lineNo < parent.StartLine || lineNo > parent.EndLine)
           continue;
 
-        var obj = BuildObj(src, lines, m.Groups[1].Value, m.Groups[2].Value,
-                           m.Index, parent, f.FilePath);
-        parent.Children.Add(obj);
-        f.Objects.Add(obj);
+        var obj = BuildObj(src, lines, m.Groups[1].Value, m.Groups[2].Value, m.Index, parent, f.FilePath);
+        if (obj != null) {
+          parent.Children.Add(obj);
+          f.Objects.Add(obj);
+        }
       }
     }
 
     // ── 단일 오브젝트 빌드 ───────────────────────────────────
-    PlSqlObj BuildObj(string src, string[] lines, string kind, string name,
+    PlSqlObj? BuildObj(string src, string[] lines, string kind, string name,
                       int idx, PlSqlObj? parent, string filePath) {
-      var obj = new PlSqlObj {
-        Name = name,
-        Kind = kind.ToUpper() == "PROCEDURE" ? ObjType.Procedure : ObjType.Function,
-        StartLine = LineOf(src, idx),
-        Parent = parent,
-        FilePath = filePath
-      };
-      obj.Params = ParseParams(src, idx, lines);
-      obj.ReturnType = obj.Kind == ObjType.Function ? ExtractReturn(src, idx) : null;
-      obj.EndLine = FindProcEnd(lines, obj.StartLine - 1);
-      if (obj.EndLine <= obj.StartLine)
-        obj.EndLine = obj.StartLine + 1;
-      obj.Source = JoinLines(lines, obj.StartLine - 1, obj.EndLine - 1);
-      obj.Sqls = ExtractSqls(obj.Source, obj.StartLine);
-      obj.Calls = ExtractCalls(obj.Source, obj.StartLine, name);
-      obj.Vars = ExtractVars(obj.Source, obj.StartLine);
-      obj.Metrics = CalcMetrics(lines, obj.StartLine - 1, obj.EndLine - 1);
-      obj.Metrics.Params = obj.Params.Count;
-      obj.Metrics.SqlCount = obj.Sqls.Count;
-      obj.Metrics.CallCount = obj.Calls.Count;
-      obj.Metrics.VarCount = obj.Vars.Count;
+      try {
+        var obj = new PlSqlObj {
+          Name = name,
+          Kind = kind.ToUpper() == "PROCEDURE" ? ObjType.Procedure : ObjType.Function,
+          StartLine = LineOf(src, idx),
+          Parent = parent,
+          FilePath = filePath
+        };
 
-      // 미사용 변수 마킹
-      foreach (var v in obj.Vars) {
-        if (v.IsExcept)
-          continue;
-        int cnt = Regex.Matches(obj.Source ?? "",
-            $@"\b{Regex.Escape(v.Name)}\b",
-            RegexOptions.IgnoreCase).Count;
-        v.IsUsed = cnt > 1;
+        obj.Params = ParseParams(src, idx, lines);
+        obj.ReturnType = obj.Kind == ObjType.Function ? ExtractReturn(src, idx) : null;
+        obj.EndLine = FindProcEnd(lines, obj.StartLine - 1);
+
+        if (obj.EndLine <= obj.StartLine)
+          obj.EndLine = obj.StartLine + 1;
+
+        obj.Source = JoinLines(lines, obj.StartLine - 1, obj.EndLine - 1);
+        obj.Sqls = ExtractSqls(obj.Source, obj.StartLine);
+        obj.Calls = ExtractCalls(obj.Source, obj.StartLine, name);
+        obj.Vars = ExtractVars(obj.Source, obj.StartLine);
+        obj.Metrics = CalcMetrics(lines, obj.StartLine - 1, obj.EndLine - 1);
+
+        obj.Metrics.Params = obj.Params.Count;
+        obj.Metrics.SqlCount = obj.Sqls.Count;
+        obj.Metrics.CallCount = obj.Calls.Count;
+        obj.Metrics.VarCount = obj.Vars.Count;
+
+        // 미사용 변수 마킹
+        foreach (var v in obj.Vars) {
+          if (v.IsExcept)
+            continue;
+          int cnt = Regex.Matches(obj.Source ?? "",
+              $@"\b{Regex.Escape(v.Name)}\b",
+              RegexOptions.IgnoreCase).Count;
+          v.IsUsed = cnt > 1;
+        }
+        return obj;
       }
-      return obj;
+      catch {
+        // 특정 오브젝트 빌드 중 에러가 나더라도 전체가 죽지 않고 넘어가도록 예외처리 추가
+        return null;
+      }
     }
 
     // ── 파라미터 파싱 ────────────────────────────────────────
@@ -148,6 +169,7 @@ namespace PlSqlAnalyzer.Parser {
         return result;
 
       int isAs = FindIsAs(src, start);
+      // 만약 ( 위치가 IS/AS 선언보다 뒤에 있다면 파라미터 괄호가 아님 (예: 내부 본문의 연산 괄호)
       if (isAs > 0 && p > isAs)
         return result;
 
@@ -559,22 +581,11 @@ namespace PlSqlAnalyzer.Parser {
       return sb.ToString();
     }
 
-    // 줄 번호(0-based) → src 내 문자 오프셋
-    int LineOffset(string src, int lineIndex) {
-      int pos = 0, cnt = 0;
-      while (pos < src.Length && cnt < lineIndex) {
-        if (src[pos] == '\n')
-          cnt++;
-        pos++;
-      }
-      return pos;
-    }
-
     int LineOf(string s, int idx) {
       int n = 1;
       for (int i = 0; i < idx && i < s.Length; i++)
-      if (s[i] == '\n')
-        n++;
+        if (s[i] == '\n')
+          n++;
       return n;
     }
     string[] SplitLines(string s) => s.Split('\n');
@@ -700,8 +711,8 @@ namespace PlSqlAnalyzer.Parser {
         return line;
       bool inS = false;
       for (int i = 0; i < ci; i++)
-      if (line[i] == '\'')
-        inS = !inS;
+        if (line[i] == '\'')
+          inS = !inS;
       return inS ? line : line[..ci];
     }
     string? ExtractReturn(string src, int start) {
