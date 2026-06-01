@@ -1,0 +1,81 @@
+﻿<?xml version="1.0"?>
+<SyntaxDefinition name="PLSQL" extensions=".sql;.pls;.pkb;.pks;.pck;.trg"
+    xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <Color name="Comment"    foreground="#608B4E" />
+  <Color name="String"     foreground="#CE9178" />
+  <Color name="Keyword"    foreground="#569CD6" fontWeight="bold"/>
+  <Color name="DML"        foreground="#C586C0" fontWeight="bold"/>
+  <Color name="DataType"   foreground="#4EC9B0" />
+  <Color name="Number"     foreground="#B5CEA8" />
+  <Color name="BuiltIn"    foreground="#DCDCAA" />
+  <Color name="Exception"  foreground="#F44747" />
+  <RuleSet ignoreCase="true">
+    <Span color="Comment" begin="--" />
+    <Span color="Comment" multiline="true"><Begin>/\*</Begin><End>\*/</End></Span>
+    <Span color="String">
+      <Begin>&apos;</Begin><End>&apos;</End>
+    </Span>
+    <Keywords color="Keyword">
+      <Word>PACKAGE</Word><Word>BODY</Word><Word>PROCEDURE</Word><Word>FUNCTION</Word>
+      <Word>BEGIN</Word><Word>END</Word><Word>DECLARE</Word><Word>IS</Word><Word>AS</Word>
+      <Word>RETURN</Word><Word>IF</Word><Word>THEN</Word><Word>ELSIF</Word><Word>ELSE</Word>
+      <Word>LOOP</Word><Word>FOR</Word><Word>WHILE</Word><Word>EXIT</Word><Word>WHEN</Word>
+      <Word>CURSOR</Word><Word>OPEN</Word><Word>CLOSE</Word><Word>FETCH</Word><Word>INTO</Word>
+      <Word>BULK</Word><Word>COLLECT</Word><Word>FORALL</Word><Word>EXCEPTION</Word>
+      <Word>RAISE</Word><Word>PRAGMA</Word><Word>TYPE</Word><Word>RECORD</Word>
+      <Word>CONSTANT</Word><Word>NULL</Word><Word>TRUE</Word><Word>FALSE</Word>
+      <Word>IN</Word><Word>OUT</Word><Word>NOCOPY</Word><Word>DEFAULT</Word>
+      <Word>TRIGGER</Word><Word>BEFORE</Word><Word>AFTER</Word><Word>CREATE</Word>
+      <Word>OR</Word><Word>REPLACE</Word><Word>AUTHID</Word><Word>CURRENT_USER</Word>
+      <Word>DEFINER</Word><Word>PIPELINED</Word><Word>DETERMINISTIC</Word>
+      <Word>EXECUTE</Word><Word>IMMEDIATE</Word><Word>USING</Word><Word>CALL</Word>
+      <Word>CASE</Word><Word>COMMIT</Word><Word>ROLLBACK</Word><Word>SAVEPOINT</Word>
+      <Word>GOTO</Word><Word>LOCK</Word><Word>NOWAIT</Word><Word>TABLE</Word>
+      <Word>INDEX</Word><Word>OF</Word><Word>ROW</Word><Word>EACH</Word>
+      <Word>STATEMENT</Word><Word>NEW</Word><Word>OLD</Word>
+    </Keywords>
+    <Keywords color="DML">
+      <Word>SELECT</Word><Word>FROM</Word><Word>WHERE</Word><Word>INSERT</Word>
+      <Word>UPDATE</Word><Word>DELETE</Word><Word>MERGE</Word><Word>SET</Word>
+      <Word>VALUES</Word><Word>AND</Word><Word>NOT</Word><Word>LIKE</Word>
+      <Word>BETWEEN</Word><Word>EXISTS</Word><Word>ANY</Word><Word>ALL</Word>
+      <Word>DISTINCT</Word><Word>UNION</Word><Word>INTERSECT</Word><Word>MINUS</Word>
+      <Word>GROUP</Word><Word>BY</Word><Word>HAVING</Word><Word>ORDER</Word>
+      <Word>ASC</Word><Word>DESC</Word><Word>JOIN</Word><Word>LEFT</Word>
+      <Word>RIGHT</Word><Word>INNER</Word><Word>OUTER</Word><Word>FULL</Word>
+      <Word>CROSS</Word><Word>ON</Word><Word>CONNECT</Word><Word>START</Word>
+      <Word>WITH</Word><Word>LEVEL</Word><Word>PRIOR</Word><Word>ROWNUM</Word>
+      <Word>ROWID</Word><Word>OVER</Word><Word>PARTITION</Word>
+    </Keywords>
+    <Keywords color="DataType">
+      <Word>VARCHAR2</Word><Word>VARCHAR</Word><Word>CHAR</Word><Word>NCHAR</Word>
+      <Word>NVARCHAR2</Word><Word>NUMBER</Word><Word>INTEGER</Word><Word>INT</Word>
+      <Word>FLOAT</Word><Word>REAL</Word><Word>DATE</Word><Word>TIMESTAMP</Word>
+      <Word>INTERVAL</Word><Word>BOOLEAN</Word><Word>CLOB</Word><Word>BLOB</Word>
+      <Word>NCLOB</Word><Word>RAW</Word><Word>LONG</Word><Word>PLS_INTEGER</Word>
+      <Word>BINARY_INTEGER</Word><Word>BINARY_FLOAT</Word><Word>BINARY_DOUBLE</Word>
+      <Word>SIMPLE_INTEGER</Word><Word>XMLTYPE</Word><Word>UROWID</Word>
+      <Word>ROWTYPE</Word><Word>TYPE</Word>
+    </Keywords>
+    <Keywords color="BuiltIn">
+      <Word>NVL</Word><Word>NVL2</Word><Word>DECODE</Word><Word>COALESCE</Word>
+      <Word>NULLIF</Word><Word>SUBSTR</Word><Word>INSTR</Word><Word>LENGTH</Word>
+      <Word>UPPER</Word><Word>LOWER</Word><Word>INITCAP</Word><Word>TRIM</Word>
+      <Word>LTRIM</Word><Word>RTRIM</Word><Word>LPAD</Word><Word>RPAD</Word>
+      <Word>REPLACE</Word><Word>TRANSLATE</Word><Word>CONCAT</Word>
+      <Word>TO_CHAR</Word><Word>TO_DATE</Word><Word>TO_NUMBER</Word>
+      <Word>TO_TIMESTAMP</Word><Word>TO_CLOB</Word><Word>SYSDATE</Word>
+      <Word>SYSTIMESTAMP</Word><Word>CURRENT_DATE</Word><Word>TRUNC</Word>
+      <Word>ROUND</Word><Word>FLOOR</Word><Word>CEIL</Word><Word>ABS</Word>
+      <Word>MOD</Word><Word>POWER</Word><Word>SQRT</Word><Word>SIGN</Word>
+      <Word>COUNT</Word><Word>SUM</Word><Word>AVG</Word><Word>MAX</Word><Word>MIN</Word>
+      <Word>LISTAGG</Word><Word>RANK</Word><Word>DENSE_RANK</Word><Word>ROW_NUMBER</Word>
+      <Word>LEAD</Word><Word>LAG</Word><Word>FIRST_VALUE</Word><Word>LAST_VALUE</Word>
+      <Word>GREATEST</Word><Word>LEAST</Word><Word>RAISE_APPLICATION_ERROR</Word>
+      <Word>DBMS_OUTPUT</Word><Word>UTL_FILE</Word><Word>DBMS_SQL</Word>
+      <Word>DBMS_LOB</Word><Word>DBMS_UTILITY</Word><Word>SYS_GUID</Word>
+      <Word>USER</Word><Word>UID</Word><Word>SQLCODE</Word><Word>SQLERRM</Word>
+    </Keywords>
+    <Rule color="Number">\b[0-9]+(\.[0-9]+)?\b</Rule>
+  </RuleSet>
+</SyntaxDefinition>
